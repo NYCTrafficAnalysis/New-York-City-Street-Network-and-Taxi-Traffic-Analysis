@@ -37,46 +37,9 @@ train_df.head()
 
 train_data = train_df.copy()
 
-# remove those large duration trip by using a cap on lat-long and visualize the distributions of latitude and longitude
-# We put the following caps on lat-long : latitude should be between 40.6 to 40.9. Longitude should be between -74.05 to -73.70
-df = train_df.loc[(train_df.pickup_latitude > 40.6) & (train_df.pickup_latitude < 40.9)]
-df = df.loc[(df.dropoff_latitude>40.6) & (df.dropoff_latitude < 40.9)]
-df = df.loc[(df.dropoff_longitude > -74.05) & (df.dropoff_longitude < -73.7)]
-df = df.loc[(df.pickup_longitude > -74.05) & (df.pickup_longitude < -73.7)]
-train_data_new = df.copy()
-sns.set(style="white", palette="muted", color_codes=True)
-f, axes = plt.subplots(2,2,figsize=(12, 12), sharex=False, sharey = False)#
-sns.despine(left=True)
-sns.distplot(train_data_new['pickup_latitude'].values, label = 'pickup_latitude',color="m",bins = 100, ax=axes[0,0])
-sns.distplot(train_data_new['pickup_longitude'].values, label = 'pickup_longitude',color="g",bins =100, ax=axes[0,1])
-sns.distplot(train_data_new['dropoff_latitude'].values, label = 'dropoff_latitude',color="m",bins =100, ax=axes[1, 0])
-sns.distplot(train_data_new['dropoff_longitude'].values, label = 'dropoff_longitude',color="g",bins =100, ax=axes[1, 1])
-plt.setp(axes, yticks=[])
-plt.tight_layout()
 
-plt.show()
 
-temp = train_data.copy()
-train_data['pickup_datetime'] = pd.to_datetime(train_data.pickup_datetime)
-train_data.loc[:, 'pick_date'] = train_data['pickup_datetime'].dt.date
-train_data.head()
 
-ts_v1 = pd.DataFrame(train_data.loc[train_data['vendor_id']==1].groupby('pick_date')['trip_duration'].mean())
-ts_v1.reset_index(inplace = True)
-ts_v2 = pd.DataFrame(train_data.loc[train_data.vendor_id==2].groupby('pick_date')['trip_duration'].mean())
-ts_v2.reset_index(inplace = True)
-
-from bokeh.palettes import Spectral4
-from bokeh.plotting import figure, output_notebook, show
-
-#from bokeh.sampledata.stocks import AAPL, IBM, MSFT, GOOG
-output_notebook()
-p = figure(plot_width=800, plot_height=250, x_axis_type="datetime")
-p.title.text = 'Click on legend entries to hide the corresponding lines'
-
-for data, name, color in zip([ts_v1, ts_v2], ["vendor 1", "vendor 2"], Spectral4):
-    df = data
-    p.line(df['pick_date'], df['trip_duration'], line_width=2, color=color, alpha=0.8, legend=name)
 
 p.legend.location = "top_left"
 p.legend.click_policy="hide"
@@ -93,49 +56,7 @@ train_data_new['drop_lat_new'] = list(map(int, (train_data_new['dropoff_latitude
 train_data_new['pick_lon_new'] = list(map(int, (train_data_new['pickup_longitude'] - (-74.050))*10000))
 train_data_new['drop_lon_new'] = list(map(int,(train_data_new['dropoff_longitude'] - (-74.050))*10000))
 
-summary_plot = pd.DataFrame(train_data_new.groupby(['pick_lat_new', 'pick_lon_new'])['id'].count())
 
-summary_plot.reset_index(inplace = True)
-summary_plot.head(120)
-lat_list = summary_plot['pick_lat_new'].unique()
-for i in lat_list:
-    lon_list = summary_plot.loc[summary_plot['pick_lat_new']==i]['pick_lon_new'].tolist()
-    unit = summary_plot.loc[summary_plot['pick_lat_new']==i]['id'].tolist()
-    for j in lon_list:
-        a = unit[lon_list.index(j)]
-        if (a//50) >0:
-            rgb[i][j][0] = 255
-            rgb[i,j, 1] = 0
-            rgb[i,j, 2] = 255
-        elif (a//10)>0:
-            rgb[i,j, 0] = 0
-            rgb[i,j, 1] = 255
-            rgb[i,j, 2] = 0
-        else:
-            rgb[i,j, 0] = 255
-            rgb[i,j, 1] = 0
-            rgb[i,j, 2] = 0
-fig, ax = plt.subplots(nrows=1,ncols=1,figsize=(14,20))
-
-ax.imshow(rgb, cmap = 'hot')
-ax.set_axis_off() 
-
-
-def haversine_(lat1, lng1, lat2, lng2):
-    """function to calculate haversine distance between two co-ordinates"""
-    lat1, lng1, lat2, lng2 = map(np.radians, (lat1, lng1, lat2, lng2))
-    AVG_EARTH_RADIUS = 6371  # in km
-    lat = lat2 - lat1
-    lng = lng2 - lng1
-    d = np.sin(lat * 0.5) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(lng * 0.5) ** 2
-    h = 2 * AVG_EARTH_RADIUS * np.arcsin(np.sqrt(d))
-    return(h)
-
-def manhattan_distance_pd(lat1, lng1, lat2, lng2):
-    """function to calculate manhatten distance between pick_drop"""
-    a = haversine_(lat1, lng1, lat1, lng2)
-    b = haversine_(lat1, lng1, lat2, lng1)
-    return a + b
 
 import math
 def bearing_array(lat1, lng1, lat2, lng2):
@@ -185,29 +106,6 @@ def Animation(hour, temp, rgb):
 
     summary_plot = pd.DataFrame(train_data_new.groupby(['pick_lat_new', 'pick_lon_new'])['id'].count())
 
-    summary_plot.reset_index(inplace = True)
-    summary_plot.head(120)
-    lat_list = summary_plot['pick_lat_new'].unique()
-    for i in lat_list:
-        #print(i)
-        lon_list = summary_plot.loc[summary_plot['pick_lat_new']==i]['pick_lon_new'].tolist()
-        unit = summary_plot.loc[summary_plot['pick_lat_new']==i]['id'].tolist()
-        for j in lon_list:
-            #j = int(j)
-            a = unit[lon_list.index(j)]
-            #print(a)
-            if (a//50) >0:
-                rgb[i][j][0] = 255 - color(hour)
-                rgb[i,j, 1] = 255 - color(hour)
-                rgb[i,j, 2] = 0 + color(hour)
-            elif (a//10)>0:
-                rgb[i,j, 0] = 0 + color(hour)
-                rgb[i,j, 1] = 255 - color(hour)
-                rgb[i,j, 2] = 0 + color(hour)
-            else:
-                rgb[i,j, 0] = 255 - color(hour)
-                rgb[i,j, 1] = 0 + color(hour)
-                rgb[i,j, 2] = 0 + color(hour)
 
     return(rgb)
 
@@ -221,37 +119,7 @@ sns.tsplot(data=summary_wdays_avg_duration, time="day_of_week", unit = "unit", c
 sns.despine(bottom = False)
 
 
-def assign_cluster(df, k):
-    """function to assign clusters """
-    df_pick = df[['pickup_longitude','pickup_latitude']]
-    df_drop = df[['dropoff_longitude','dropoff_latitude']]
 
-    init = np.array([[ -73.98737616,   40.72981533],
-       [-121.93328857,   37.38933945],
-       [ -73.78423222,   40.64711269],
-       [ -73.9546417 ,   40.77377538],
-       [ -66.84140269,   36.64537175],
-       [ -73.87040541,   40.77016484],
-       [ -73.97316185,   40.75814346],
-       [ -73.98861094,   40.7527791 ],
-       [ -72.80966949,   51.88108444],
-       [ -76.99779701,   38.47370625],
-       [ -73.96975298,   40.69089596],
-       [ -74.00816622,   40.71414939],
-       [ -66.97216034,   44.37194443],
-       [ -61.33552933,   37.85105133],
-       [ -73.98001393,   40.7783577 ],
-       [ -72.00626526,   43.20296402],
-       [ -73.07618713,   35.03469086],
-       [ -73.95759366,   40.80316361],
-       [ -79.20167796,   41.04752096],
-       [ -74.00106031,   40.73867723]])
-    k_means_pick = KMeans(n_clusters=k, init=init, n_init=1)
-    k_means_pick.fit(df_pick)
-    clust_pick = k_means_pick.labels_
-    df['label_pick'] = clust_pick.tolist()
-    df['label_drop'] = k_means_pick.predict(df_drop)
-    return df, k_means_pick
 
 
 train_cl, k_means = assign_cluster(train_data, 20)  # make it 100 when extracting features 
@@ -282,63 +150,7 @@ train_cl.loc[:,'bearing_cent_p_cent_d'] = bearing_array(train_cl['centroid_pick_
 train_cl['speed_hvsn'] = train_cl.hvsine_pick_drop/train_cl.total_travel_time
 train_cl['speed_manhtn'] = train_cl.manhtn_pick_drop/train_cl.total_travel_time
 
-train_cl.head()
 
-# Cluster visualization using folium
-import folium
-def cluster_summary(sum_df):
-    """function to calculate summary of given list of clusters """
-    #agg_func = {'trip_duration':'mean','label_drop':'count','bearing':'mean','id':'count'} # that's how you use agg function with groupby
-    summary_avg_time = pd.DataFrame(sum_df.groupby('label_pick')['trip_duration'].mean())
-    summary_avg_time.reset_index(inplace = True)
-    summary_pref_clus = pd.DataFrame(sum_df.groupby(['label_pick', 'label_drop'])['id'].count())
-    summary_pref_clus = summary_pref_clus.reset_index()
-    summary_pref_clus = summary_pref_clus.loc[summary_pref_clus.groupby('label_pick')['id'].idxmax()]
-    summary =pd.merge(summary_avg_time, summary_pref_clus, how = 'left', on = 'label_pick')
-    summary = summary.rename(columns={'trip_duration':'avg_triptime'})
-    return summary
-def show_fmaps(train_data, path=1):
-    """function to generate map and add the pick up and drop coordinates
-    1. Path = 1 : Join pickup (blue) and drop(red) using a straight line
-    """
-    full_data = train_data
-    summary_full_data = pd.DataFrame(full_data.groupby('label_pick')['id'].count())
-    summary_full_data.reset_index(inplace = True)
-    summary_full_data = summary_full_data.loc[summary_full_data['id']>70000]
-    map_1 = folium.Map(location=[40.767937, -73.982155], zoom_start=10,tiles='Stamen Toner') # manually added centre
-    new_df = train_data.loc[train_data['label_pick'].isin(summary_full_data.label_pick.tolist())].sample(50)
-    new_df.reset_index(inplace = True, drop = True)
-    for i in range(new_df.shape[0]):
-        pick_long = new_df.loc[new_df.index ==i]['pickup_longitude'].values[0]
-        pick_lat = new_df.loc[new_df.index ==i]['pickup_latitude'].values[0]
-        dest_long = new_df.loc[new_df.index ==i]['dropoff_longitude'].values[0]
-        dest_lat = new_df.loc[new_df.index ==i]['dropoff_latitude'].values[0]
-        folium.Marker([pick_lat, pick_long]).add_to(map_1)
-        folium.Marker([dest_lat, dest_long]).add_to(map_1)
-    return map_1
-
-def clusters_map(clus_data, full_data, tile = 'OpenStreetMap', sig = 0, zoom = 12, circle = 0, radius_ = 30):
-    """ function to plot clusters on map"""
-    map_1 = folium.Map(location=[40.767937, -73.982155], zoom_start=zoom,tiles= tile) # 'Mapbox' 'Stamen Toner'
-    summary_full_data = pd.DataFrame(full_data.groupby('label_pick')['id'].count())
-    summary_full_data.reset_index(inplace = True)
-    if sig == 1:
-        summary_full_data = summary_full_data.loc[summary_full_data['id']>70000]
-    sig_cluster = summary_full_data['label_pick'].tolist()
-    clus_summary = cluster_summary(full_data)
-    for i in sig_cluster:
-        pick_long = clus_data.loc[clus_data.index ==i]['centroid_pick_long'].values[0]
-        pick_lat = clus_data.loc[clus_data.index ==i]['centroid_pick_lat'].values[0]
-        clus_no = clus_data.loc[clus_data.index ==i]['label_pick'].values[0]
-        most_visited_clus = clus_summary.loc[clus_summary['label_pick']==i]['label_drop'].values[0]
-        avg_triptime = clus_summary.loc[clus_summary['label_pick']==i]['avg_triptime'].values[0]
-        pop = 'cluster = '+str(clus_no)+' & most visited cluster = ' +str(most_visited_clus) +' & avg triptime from this cluster =' + str(avg_triptime)
-        if circle == 1:
-            folium.CircleMarker(location=[pick_lat, pick_long], radius=radius_,
-                    color='#F08080',
-                    fill_color='#3186cc', popup=pop).add_to(map_1)
-        folium.Marker([pick_lat, pick_long], popup=pop).add_to(map_1)
-    return map_1
 
 osm = show_fmaps(train_data, path=1)
 osm
